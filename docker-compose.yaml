@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  api-gateway:
+    build: ./api_gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - JWT_SECRET=your-super-secret-key
+      - ENVIRONMENT=development
+    depends_on:
+      - users-service
+      - orders-service
+
+  users-service:
+    build: ./service_users
+    ports:
+      - "8001:8001"
+    environment:
+      - JWT_SECRET=your-super-secret-key
+      - ENVIRONMENT=development
+
+  orders-service:
+    build: ./service_orders
+    ports:
+      - "8002:8002"
+    environment:
+      - JWT_SECRET=your-super-secret-key
+      - ENVIRONMENT=development
+    depends_on:
+      - users-service
