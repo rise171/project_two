@@ -6,9 +6,11 @@ import uuid
 import logging
 from datetime import datetime
 from typing import Optional
-from .models import OrderCreate, OrderResponse, StandardResponse, OrderStatus, OrderUpdate
-from .database import OrderDB
 
+from .models import OrderCreate, OrderResponse, StandardResponse, OrderStatus, OrderUpdate
+from .database import order_db  # Изменен импорт
+
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - [%(request_id)s] - %(message)s'
@@ -76,12 +78,12 @@ async def create_order(
             error={"code": "INVALID_ORDER", "message": "Order must contain at least one item"}
         )
     
-    total_amount = OrderDB.calculate_total_amount(order_data.items)
+    total_amount = order_db.calculate_total_amount(order_data.items)
     
     order_id = str(uuid.uuid4())
     now = datetime.utcnow()
     
-    order = OrderDB.create_order({
+    order = order_db.create_order({
         "id": order_id,
         "user_id": current_user["user_id"],
         "items": order_data.items,
@@ -90,6 +92,12 @@ async def create_order(
         "created_at": now,
         "updated_at": now
     })
+    
+    if not order:
+        return StandardResponse(
+            success=False,
+            error={"code": "CREATION_FAILED", "message": "Failed to create order"}
+        )
     
     logger.info(f"Order created successfully: {order_id} - Total: {total_amount}")
     
@@ -104,14 +112,14 @@ async def get_order(
     request: Request,
     current_user: dict = Depends(verify_token)
 ):
-    order = OrderDB.get_order_by_id(order_id)
+    order = order_db.get_order_by_id(order_id)
     if not order:
         return StandardResponse(
             success=False,
             error={"code": "ORDER_NOT_FOUND", "message": "Order not found"}
         )
     
-    if not OrderDB.can_user_access_order(order, current_user):
+    if not order_db.can_user_access_order(order, current_user):
         logger.warning(f"Unauthorized access attempt to order {order_id} by user {current_user['user_id']}")
         raise HTTPException(status_code=403, detail="Access denied")
     
@@ -129,18 +137,16 @@ async def get_orders(
     status: Optional[OrderStatus] = Query(None, description="Filter by status")
 ):
     """Get user's orders with pagination and filtering"""
-    # Calculate pagination
     skip = (page - 1) * limit
     
-    # Get orders
-    user_orders = OrderDB.get_orders_by_user(
+    user_orders = order_db.get_orders_by_user(
         current_user["user_id"], 
         skip, 
         limit, 
         status.value if status else None
     )
     
-    total_orders = OrderDB.get_user_orders_count(
+    total_orders = order_db.get_user_orders_count(
         current_user["user_id"], 
         status.value if status else None
     )
@@ -169,14 +175,14 @@ async def update_order_status(
     request: Request,
     current_user: dict = Depends(verify_token)
 ):
-    order = OrderDB.get_order_by_id(order_id)
+    order = order_db.get_order_by_id(order_id)
     if not order:
         return StandardResponse(
             success=False,
             error={"code": "ORDER_NOT_FOUND", "message": "Order not found"}
         )
     
-    if not OrderDB.can_user_access_order(order, current_user):
+    if not order_db.can_user_access_order(order, current_user):
         logger.warning(f"Unauthorized status update attempt for order {order_id} by user {current_user['user_id']}")
         raise HTTPException(status_code=403, detail="Access denied")
     
@@ -186,7 +192,7 @@ async def update_order_status(
             error={"code": "INVALID_STATUS", "message": "Status is required"}
         )
     
-    updated_order = OrderDB.update_order_status(order_id, status_update.status)
+    updated_order = order_db.update_order_status(order_id, status_update.status)
     
     if not updated_order:
         return StandardResponse(
@@ -207,7 +213,7 @@ async def cancel_order(
     request: Request,
     current_user: dict = Depends(verify_token)
 ):
-    order = OrderDB.get_order_by_id(order_id)
+    order = order_db.get_order_by_id(order_id)
     if not order:
         return StandardResponse(
             success=False,
@@ -224,7 +230,7 @@ async def cancel_order(
             error={"code": "ALREADY_CANCELLED", "message": "Order already cancelled"}
         )
     
-    updated_order = OrderDB.update_order_status(order_id, OrderStatus.CANCELLED)
+    updated_order = order_db.update_order_status(order_id, OrderStatus.CANCELLED)
     
     if not updated_order:
         return StandardResponse(
@@ -252,8 +258,8 @@ async def get_all_orders(
     
     skip = (page - 1) * limit
     
-    all_orders = OrderDB.get_all_orders(skip, limit)
-    total_orders = OrderDB.get_total_orders_count()
+    all_orders = order_db.get_all_orders(skip, limit)
+    total_orders = order_db.get_total_orders_count()
     total_pages = (total_orders + limit - 1) // limit if total_orders > 0 else 1
     
     logger.info(f"All orders accessed by admin: {current_user['user_id']} - Total: {total_orders}")
