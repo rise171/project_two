@@ -8,9 +8,9 @@ from datetime import datetime
 from typing import Optional
 
 from .models import OrderCreate, OrderResponse, StandardResponse, OrderStatus, OrderUpdate
-from .database import order_db  # Изменен импорт
+from .database import order_db
 
-# Configure logging
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - [%(request_id)s] - %(message)s'
@@ -136,7 +136,6 @@ async def get_orders(
     limit: int = Query(10, ge=1, le=100, description="Items per page"),
     status: Optional[OrderStatus] = Query(None, description="Filter by status")
 ):
-    """Get user's orders with pagination and filtering"""
     skip = (page - 1) * limit
     
     user_orders = order_db.get_orders_by_user(
