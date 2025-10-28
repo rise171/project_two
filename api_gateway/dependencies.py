@@ -7,7 +7,7 @@ from typing import Dict, Any
 security = HTTPBearer()
 
 JWT_SECRET = os.getenv("JWT_SECRET", "your-secret-key")
-
+#валидация токенов
 async def verify_token(
     request: Request,
     credentials: HTTPAuthorizationCredentials = None

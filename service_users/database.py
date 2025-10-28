@@ -204,7 +204,7 @@ class UserDB:
             logger.error(f"Error getting users count: {e}")
             return 0
 
-    def delete_user(self, user_id: str) -> bool:
+    def delete_user(self, user_id: str) -> bool: 
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()

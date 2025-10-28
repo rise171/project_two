@@ -9,7 +9,6 @@ import logging
 from middleware import RateLimitMiddleware, RequestIDMiddleware
 from dependencies import verify_token
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -22,7 +21,6 @@ app = FastAPI(
     description="Gateway for microservices task management system"
 )
 
-# Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -33,19 +31,15 @@ app.add_middleware(
 app.add_middleware(RequestIDMiddleware)
 app.add_middleware(RateLimitMiddleware, calls=100, period=60)
 
-# Security
 security = HTTPBearer()
 
-# Services URLs
 USER_SERVICE_URL = "http://users-service:8001"
 ORDER_SERVICE_URL = "http://orders-service:8002"
 
-# Development URLs (for local testing)
 DEV_USER_SERVICE_URL = "http://localhost:8001"
 DEV_ORDER_SERVICE_URL = "http://localhost:8002"
 
 def get_service_urls():
-    """Get service URLs based on environment"""
     import os
     env = os.getenv("ENVIRONMENT", "development")
     
@@ -56,7 +50,6 @@ def get_service_urls():
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    """Log all incoming requests"""
     request_id = getattr(request.state, 'request_id', 'unknown')
     logger.info(f"Request: {request.method} {request.url.path} - ID: {request_id}")
     
@@ -70,10 +63,8 @@ async def log_requests(request: Request, call_next):
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
     return {"status": "healthy", "service": "api-gateway"}
 
-# Users service routes
 @app.api_route("/v1/users/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
 async def proxy_users(
     request: Request, 
@@ -89,7 +80,6 @@ async def proxy_auth(request: Request, path: str):
     user_service_url, _ = get_service_urls()
     return await proxy_request(request, user_service_url, f"auth/{path}")
 
-# Orders service routes
 @app.api_route("/v1/orders/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
 async def proxy_orders(
     request: Request, 
@@ -101,20 +91,18 @@ async def proxy_orders(
     return await proxy_request(request, order_service_url, path)
 
 async def proxy_request(request: Request, base_url: str, path: str):
-    """
-    Proxy request to target service
-    """
+    # Формируем URL целевого сервиса
     url = f"{base_url}/v1/{path}" if path else f"{base_url}/v1/{request.url.path.split('/')[-1]}"
-    
+    # Подготавливаем заголовки
     headers = dict(request.headers)
-    headers.pop("host", None)
+    headers.pop("host", None) # Удаляем host оригинального запроса
     
-    # Add request ID if available
     request_id = getattr(request.state, 'request_id', None)
     if request_id:
         headers["X-Request-ID"] = request_id
     
     try:
+        #Отправляем запрос в целевой сервис
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.request(
                 method=request.method,
@@ -123,7 +111,7 @@ async def proxy_request(request: Request, base_url: str, path: str):
                 content=await request.body(),
                 params=dict(request.query_params)
             )
-        
+        #Возвращаем ответ от сервиса
         return JSONResponse(
             content=response.json(),
             status_code=response.status_code,
@@ -157,7 +145,6 @@ async def proxy_request(request: Request, base_url: str, path: str):
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
-    """Global exception handler"""
     request_id = getattr(request.state, 'request_id', 'unknown')
     logger.warning(f"HTTPException: {exc.status_code} - {exc.detail} - ID: {request_id}")
     
