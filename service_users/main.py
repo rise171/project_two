@@ -3,13 +3,13 @@ from fastapi.security import HTTPBearer
 from pydantic import BaseModel, EmailStr
 import uuid
 from datetime import datetime
-import jwt
+from jose import jwt
 from passlib.context import CryptContext
 from typing import List, Optional
 import logging
 
-from models import UserCreate, UserLogin, UserResponse, UserUpdate, StandardResponse
-from database import user_db  # Изменен импорт
+from schemas import UserCreate, UserLogin, UserResponse, UserUpdate, StandardResponse
+from database import user_db 
 from auth import verify_password, get_password_hash, create_access_token
 from dependencies import verify_token
 

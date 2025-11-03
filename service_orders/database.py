@@ -3,7 +3,7 @@ import sqlite3
 import json
 from typing import List, Optional
 from datetime import datetime
-from .models import Order, OrderItem, OrderStatus
+from models import Order, OrderItem, OrderStatus
 import os
 
 logger = logging.getLogger(__name__)
@@ -70,7 +70,6 @@ class OrderDB:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 
-                # Convert items to JSON string
                 items_json = json.dumps([item.dict() for item in order_data['items']])
                 created_at = order_data['created_at'].isoformat()
                 updated_at = order_data['updated_at'].isoformat()

@@ -1,14 +1,14 @@
 from fastapi import FastAPI, Depends, HTTPException, Request, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
-import jwt
+from jose import jwt
 import uuid
 import logging
 from datetime import datetime
 from typing import Optional
 
-from .models import OrderCreate, OrderResponse, StandardResponse, OrderStatus, OrderUpdate
-from .database import order_db
+from models import OrderCreate, OrderResponse, StandardResponse, OrderStatus, OrderUpdate
+from database import order_db
 
 
 logging.basicConfig(
