@@ -2,7 +2,7 @@ import logging
 import sqlite3
 from typing import List, Optional
 from datetime import datetime
-from service_users.schemas import User
+from schemas import User
 import os
 
 logger = logging.getLogger(__name__)

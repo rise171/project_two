@@ -1,6 +1,6 @@
 from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-import jwt
+from jose import jwt
 import os
 from typing import Dict, Any
 
