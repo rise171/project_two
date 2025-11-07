@@ -1,45 +1,109 @@
 import pytest
 import requests
 import uuid
+import time
 
-USER_SERVICE_URL = "http://localhost:8001"
+BASE_URL = "http://localhost:8000"  # API Gateway
 
-def test_user_service_health():
-    response = requests.get(f"{USER_SERVICE_URL}/health")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "healthy"
-    assert data["service"] == "user-service"
-    print("health check passed")
-
-def test_user_registration():
-    unique_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
+class TestUserService:
+    """Тесты для User Service (оценка 3)"""
     
-    user_data = {
-        "email": unique_email,
-        "password": "password123",
-        "name": "Test User"
-    }
+    def setup_method(self):
+        self.test_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
+        self.password = "password123"
+        self.name = "Test User"
+        self.user_id = None
+        self.token = None
     
-    response = requests.post(f"{USER_SERVICE_URL}/v1/auth/register", json=user_data)
-    assert response.status_code == 200
+    def test_1_successful_registration(self):
+        """Успешная регистрация с валидными полями"""
+        print("\n Тест 1: Успешная регистрация")
+        
+        register_data = {
+            "email": self.test_email,
+            "password": self.password,
+            "name": self.name
+        }
+        
+        response = requests.post(f"{BASE_URL}/v1/auth/register", json=register_data)
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+        
+        data = response.json()
+        assert data["success"] == True
+        assert "id" in data["data"]
+        
+        self.user_id = data["data"]["id"]
+        print(f"Успешная регистрация - ID: {self.user_id}")
     
-    data = response.json()
-    assert data["success"] == True
-    assert "id" in data["data"]
-    print(f"User registration test passed - User ID: {data['data']['id']}")
-
-def test_user_login():
-    login_data = {
-        "email": "test@example.com",
-        "password": "password123"
-    }
+    def test_2_duplicate_registration_error(self):
+        print("\nТест 2: Ошибка дублирования email")
+        
+        # Первая регистрация
+        register_data = {
+            "email": self.test_email,
+            "password": self.password,
+            "name": self.name
+        }
+        response1 = requests.post(f"{BASE_URL}/v1/auth/register", json=register_data)
+        assert response1.status_code == 200
+        
+        response2 = requests.post(f"{BASE_URL}/v1/auth/register", json=register_data)
+        assert response2.status_code == 400
+        
+        data = response2.json()
+        assert data["success"] == False
+        assert data["error"]["code"] == "USER_EXISTS"
+        print("Корректная ошибка при дублировании email")
     
-    response = requests.post(f"{USER_SERVICE_URL}/v1/auth/login", json=login_data)
-    assert response.status_code in [200, 400]
-    
-    if response.status_code == 200:
+    def test_3_successful_login_with_token(self):
+        print("\n Тест 3: Успешный вход с получением токена")
+        
+        # Регистрация
+        register_data = {
+            "email": self.test_email,
+            "password": self.password,
+            "name": self.name
+        }
+        requests.post(f"{BASE_URL}/v1/auth/register", json=register_data)
+        
+        # Вход
+        login_data = {
+            "email": self.test_email,
+            "password": self.password
+        }
+        response = requests.post(f"{BASE_URL}/v1/auth/login", json=login_data)
+        assert response.status_code == 200
+        
         data = response.json()
         assert data["success"] == True
         assert "access_token" in data["data"]
-    print("login test passed")
+        
+        self.token = data["data"]["access_token"]
+        print(f"Успешный вход - токен получен")
+        return self.token
+    
+    def test_4_protected_route_without_token(self):
+        print("\n=== Тест 4: Защищенный маршрут без токена ===")
+        
+        response = requests.get(f"{BASE_URL}/v1/users/me")
+        assert response.status_code == 401
+        
+        data = response.json()
+        assert data["success"] == False
+        assert "authentication" in data["error"]["message"].lower()
+        print("Корректный отказ в доступе без токена")
+    
+    def test_5_get_profile_with_token(self):
+        print("\n Тест 5: Получение профиля с токеном")
+        
+        # Регистрация и вход
+        self.test_3_successful_login_with_token()
+        
+        headers = {"Authorization": f"Bearer {self.token}"}
+        response = requests.get(f"{BASE_URL}/v1/users/me", headers=headers)
+        assert response.status_code == 200
+        
+        data = response.json()
+        assert data["success"] == True
+        assert data["data"]["email"] == self.test_email
+        print("Успешное получение профиля")
