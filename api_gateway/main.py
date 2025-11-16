@@ -29,7 +29,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(RequestIDMiddleware)
-app.add_middleware(RateLimitMiddleware, calls=100, period=60)
+app.add_middleware(RateLimitMiddleware, max_requests=100, window_seconds=60)
 
 security = HTTPBearer()
 

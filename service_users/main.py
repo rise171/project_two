@@ -167,3 +167,11 @@ async def get_users(
             }
         }
     )
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "service": "users-service"}
+
+@app.get("/")
+async def root():
+    return {"message": "Users Service is running"}
