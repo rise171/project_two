@@ -57,3 +57,13 @@ tests/
 ├── test_api.py      # Тесты API Gateway
 ├── test_order.py    # Тесты сервиса заказов
 └── test_user.py     # Тесты сервиса пользователей
+
+Запуск проекта:
+docker-compose build
+docker-compose up
+
+Для перезапуска контейнеров:
+docker-compose down
+
+Для запуска тестов использовать команду:
+python -m pytest tests/<имя файла>.py
